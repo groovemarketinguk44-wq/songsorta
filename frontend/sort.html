@@ -43,10 +43,7 @@
       <div class="song-title" id="song-title"></div>
     </div>
 
-    <!-- Playlist selector (shown when no speed dial set) -->
-    <div class="playlist-selector-wrap" style="margin-top:16px">
-      <select id="playlist-select"></select>
-    </div>
+    <div class="pl-card-grid" id="pl-card-grid"></div>
 
     <div class="sort-actions">
       <button class="btn-skip" onclick="doAction('skip', null)">✕ Skip</button>
@@ -54,13 +51,7 @@
     </div>
 
     <div class="key-hint" style="margin-top:10px">
-      <kbd>←</kbd> Skip &nbsp; <kbd>→</kbd> Add &nbsp; <kbd>1</kbd>–<kbd>9</kbd> Speed dial &nbsp; <kbd>⌘Z</kbd> Undo
-    </div>
-
-    <!-- Speed dial -->
-    <div class="speed-dial-section" id="speed-dial-section" style="display:none">
-      <div class="speed-dial-label">Speed Dial</div>
-      <div class="speed-dial-grid" id="speed-dial-grid"></div>
+      <kbd>←</kbd> Skip &nbsp; <kbd>→</kbd> Add to selected &nbsp; <kbd>1</kbd>–<kbd>9</kbd> Top 9 cards &nbsp; <kbd>⌘Z</kbd> Undo
     </div>
   </div>
 

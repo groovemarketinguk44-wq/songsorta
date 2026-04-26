@@ -51,29 +51,22 @@ function renderPlaylists(playlists) {
     container.innerHTML = '<div class="empty-state">No playlists yet.</div>';
     return;
   }
-  container.innerHTML = playlists.map(p => {
-    const slotBadge = p.speed_dial_slot
-      ? `<span class="speed-dial-badge">${p.speed_dial_slot}</span>` : '';
-    return `
-      <div class="playlist-item" draggable="true" data-id="${p.id}">
-        <div class="playlist-drag-handle" title="Drag to reorder">⠿</div>
-        <div class="playlist-info">
-          <div class="playlist-name" style="display:flex;align-items:center;gap:8px">
-            ${slotBadge}${escHtml(p.name)}
-          </div>
-          <div class="playlist-meta">${p.song_count} song${p.song_count !== 1 ? 's' : ''}</div>
-        </div>
-        <div class="playlist-actions">
-          <button class="btn btn-ghost btn-xs" onclick="openSpeedDialPicker(${p.id})">⚡</button>
-          <button class="btn btn-ghost btn-xs" onclick="sortPlaylist(${p.id})">↺ Sort</button>
-          <button class="btn btn-ghost btn-xs" onclick="window.location='/playlist?id=${p.id}'">View</button>
-          <button class="btn btn-ghost btn-xs" onclick="exportPlaylist(${p.id}, '${escHtml(p.name)}')">↓ txt</button>
-          ${window._spotifyConnected ? `<button class="btn btn-ghost btn-xs" onclick="exportToSpotify(${p.id},'${escHtml(p.name)}')" style="color:#1DB954">→ Spotify</button>` : ''}
-          ${window._appleConfigured ? `<button class="btn btn-ghost btn-xs" onclick="exportToAppleMusicFromDashboard(${p.id},'${escHtml(p.name)}')" style="color:#fc3c44">→ Apple</button>` : ''}
-          <button class="btn btn-ghost btn-xs" onclick="deletePlaylist(${p.id})" style="color:var(--danger)">✕</button>
-        </div>
-      </div>`;
-  }).join('');
+  container.innerHTML = playlists.map(p => `
+    <div class="playlist-item" draggable="true" data-id="${p.id}">
+      <div class="playlist-drag-handle" title="Drag to reorder">⠿</div>
+      <div class="playlist-info">
+        <div class="playlist-name">${escHtml(p.name)}</div>
+        <div class="playlist-meta">${p.song_count} song${p.song_count !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="playlist-actions">
+        <button class="btn btn-ghost btn-xs" onclick="sortPlaylist(${p.id})">↺ Sort</button>
+        <button class="btn btn-ghost btn-xs" onclick="window.location='/playlist?id=${p.id}'">View</button>
+        <button class="btn btn-ghost btn-xs" onclick="exportPlaylist(${p.id}, '${escHtml(p.name)}')">↓ txt</button>
+        ${window._spotifyConnected ? `<button class="btn btn-ghost btn-xs" onclick="exportToSpotify(${p.id},'${escHtml(p.name)}')" style="color:#1DB954">→ Spotify</button>` : ''}
+        ${window._appleConfigured ? `<button class="btn btn-ghost btn-xs" onclick="exportToAppleMusicFromDashboard(${p.id},'${escHtml(p.name)}')" style="color:#fc3c44">→ Apple</button>` : ''}
+        <button class="btn btn-ghost btn-xs" onclick="deletePlaylist(${p.id})" style="color:var(--danger)">✕</button>
+      </div>
+    </div>`).join('');
   initPlaylistDrag();
 }
 
@@ -158,52 +151,6 @@ function exportRemaining(id, name) {
 function exportPlaylist(id, name) {
   const token = getToken();
   window.open(`/api/playlists/${id}/export?token=${token}`, '_blank');
-}
-
-// Speed dial picker modal
-let speedDialTargetId = null;
-
-function openSpeedDialPicker(playlistId) {
-  speedDialTargetId = playlistId;
-  const pl = allPlaylists.find(p => p.id === playlistId);
-  document.getElementById('speed-dial-playlist-name').textContent = pl ? pl.name : '';
-
-  // Build slot buttons
-  const taken = {};
-  allPlaylists.forEach(p => { if (p.speed_dial_slot) taken[p.speed_dial_slot] = p.name; });
-  const current = pl ? pl.speed_dial_slot : null;
-
-  const wrap = document.getElementById('speed-dial-slots');
-  wrap.innerHTML = '';
-  for (let i = 1; i <= 9; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'slot-btn' + (current === i ? ' active' : '') + (taken[i] && taken[i] !== pl?.name ? ' taken' : '');
-    btn.textContent = i;
-    btn.title = taken[i] && taken[i] !== pl?.name ? `Taken by ${taken[i]}` : '';
-    btn.onclick = () => assignSlot(i);
-    wrap.appendChild(btn);
-  }
-  // Clear button
-  if (current) {
-    const clearBtn = document.createElement('button');
-    clearBtn.className = 'btn btn-ghost btn-xs';
-    clearBtn.textContent = 'Clear';
-    clearBtn.style.marginLeft = '8px';
-    clearBtn.onclick = () => assignSlot(0);
-    wrap.appendChild(clearBtn);
-  }
-
-  document.getElementById('speed-dial-modal').classList.add('open');
-}
-
-async function assignSlot(slot) {
-  try {
-    await apiFetch(`/api/playlists/${speedDialTargetId}/speed-dial?slot=${slot}`, { method: 'PUT' });
-    document.getElementById('speed-dial-modal').classList.remove('open');
-    loadDashboard();
-  } catch (e) {
-    showToast(e.message, 'warn');
-  }
 }
 
 // Upload modal
