@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 import os
 
 from .database import engine
@@ -16,6 +17,13 @@ async def lifespan(app: FastAPI):
     except OSError:
         pass
     Base.metadata.create_all(bind=engine)
+    # Migrations for columns added after initial deploy
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE playlists ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
     yield
 
 

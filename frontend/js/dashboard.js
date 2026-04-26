@@ -54,7 +54,8 @@ function renderPlaylists(playlists) {
     const slotBadge = p.speed_dial_slot
       ? `<span class="speed-dial-badge">${p.speed_dial_slot}</span>` : '';
     return `
-      <div class="playlist-item">
+      <div class="playlist-item" draggable="true" data-id="${p.id}">
+        <div class="playlist-drag-handle" title="Drag to reorder">⠿</div>
         <div class="playlist-info">
           <div class="playlist-name" style="display:flex;align-items:center;gap:8px">
             ${slotBadge}${escHtml(p.name)}
@@ -70,6 +71,55 @@ function renderPlaylists(playlists) {
         </div>
       </div>`;
   }).join('');
+  initPlaylistDrag();
+}
+
+let plDragSrc = null;
+
+function initPlaylistDrag() {
+  const items = document.querySelectorAll('#playlists-list .playlist-item');
+  items.forEach(item => {
+    item.addEventListener('dragstart', e => {
+      plDragSrc = item;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => item.classList.add('dragging'), 0);
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      document.querySelectorAll('#playlists-list .playlist-item').forEach(i => i.classList.remove('drag-over'));
+      plDragSrc = null;
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (item === plDragSrc) return;
+      document.querySelectorAll('#playlists-list .playlist-item').forEach(i => i.classList.remove('drag-over'));
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!plDragSrc || item === plDragSrc) return;
+      item.classList.remove('drag-over');
+
+      const container = document.getElementById('playlists-list');
+      const allItems = [...container.querySelectorAll('.playlist-item')];
+      const srcIdx = allItems.indexOf(plDragSrc);
+      const tgtIdx = allItems.indexOf(item);
+
+      if (srcIdx < tgtIdx) item.after(plDragSrc);
+      else item.before(plDragSrc);
+
+      const newOrder = [...container.querySelectorAll('.playlist-item')].map(i => parseInt(i.dataset.id));
+      savePlaylistOrder(newOrder);
+    });
+  });
+}
+
+async function savePlaylistOrder(ids) {
+  await apiFetch('/api/playlists/reorder', {
+    method: 'PUT',
+    body: JSON.stringify(ids),
+  });
 }
 
 function goSort(fileId) {

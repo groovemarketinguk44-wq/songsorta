@@ -40,13 +40,14 @@ def pl_detail(p: Playlist) -> dict:
 
 @router.get("/")
 def list_playlists(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    playlists = db.query(Playlist).filter_by(user_id=user.id).order_by(Playlist.updated_at.desc()).all()
+    playlists = db.query(Playlist).filter_by(user_id=user.id).order_by(Playlist.sort_order.asc(), Playlist.created_at.asc()).all()
     return [pl_detail(p) for p in playlists]
 
 
 @router.post("/")
 def create_playlist(data: PlaylistCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    p = Playlist(name=data.name.strip(), user_id=user.id, songs="[]")
+    max_order = db.query(Playlist).filter_by(user_id=user.id).count()
+    p = Playlist(name=data.name.strip(), user_id=user.id, songs="[]", sort_order=max_order)
     db.add(p)
     db.commit()
     db.refresh(p)
@@ -76,11 +77,20 @@ async def upload_playlist(
     if not songs:
         raise HTTPException(400, "No songs found in file")
 
-    p = Playlist(name=name.strip(), user_id=user.id, songs=json.dumps(songs))
+    max_order = db.query(Playlist).filter_by(user_id=user.id).count()
+    p = Playlist(name=name.strip(), user_id=user.id, songs=json.dumps(songs), sort_order=max_order)
     db.add(p)
     db.commit()
     db.refresh(p)
     return pl_detail(p)
+
+
+@router.put("/reorder")
+def reorder_playlists(ids: list[int], db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    for i, pid in enumerate(ids):
+        db.query(Playlist).filter_by(id=pid, user_id=user.id).update({"sort_order": i})
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/{playlist_id}")

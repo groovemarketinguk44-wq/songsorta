@@ -38,6 +38,7 @@ class Playlist(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     songs = Column(Text, default="[]")            # JSON array of song strings
     speed_dial_slot = Column(Integer, nullable=True)  # 1-9
+    sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 

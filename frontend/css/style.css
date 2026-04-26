@@ -142,6 +142,16 @@ nav .nav-logout:hover { border-color: var(--text); color: var(--text); }
   transition: border-color 0.15s;
 }
 .file-item:hover, .playlist-item:hover { border-color: #555; }
+.playlist-drag-handle {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  cursor: grab;
+  padding: 0 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.playlist-item.dragging { opacity: 0.4; cursor: grabbing; }
+.playlist-item.drag-over { background: rgba(29,185,84,0.08); border-color: var(--accent); }
 .file-info, .playlist-info { flex: 1; min-width: 0; }
 .file-name, .playlist-name {
   font-weight: 600;
