@@ -102,6 +102,14 @@ def get_file(file_id: int, db: Session = Depends(get_db), user: User = Depends(g
     return file_progress(f)
 
 
+@router.get("/{file_id}/remaining-songs")
+def get_remaining_songs(file_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    f = db.query(SourceFile).filter_by(id=file_id, user_id=user.id).first()
+    if not f:
+        raise HTTPException(404)
+    return {"songs": json.loads(f.remaining_songs)}
+
+
 @router.post("/{file_id}/restart")
 def restart_file(file_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     f = db.query(SourceFile).filter_by(id=file_id, user_id=user.id).first()

@@ -37,7 +37,7 @@ function renderFiles(files) {
         </div>
         <div class="file-actions">
           ${actions}
-          <button class="btn btn-ghost btn-xs" onclick="openBulkToPlaylist(${f.id},'${escHtml(f.name)}')">Bulk → Playlist</button>
+          <button class="btn btn-ghost btn-xs" onclick="openBulkToPlaylist(${f.id},'${escHtml(f.name)}')">Bulk</button>
           <button class="btn btn-ghost btn-xs" onclick="exportRemaining(${f.id}, '${escHtml(f.name)}')">Export</button>
           <button class="btn btn-ghost btn-xs" onclick="deleteFile(${f.id})" style="color:var(--danger)">✕</button>
         </div>
@@ -431,34 +431,25 @@ async function doBulkAdd() {
   const resultEl = document.getElementById('bulk-result');
   resultEl.textContent = 'Adding…';
   try {
-    // Fetch the file's remaining songs
-    const file = await apiFetch(`/api/files/${bulkSourceFileId}`);
-    const fileDetail = await apiFetch(`/api/files/${bulkSourceFileId}`);
-
-    // Get full remaining list via export endpoint (returns plain text)
-    const token = getToken();
-    const remaining = await fetch(`/api/files/${bulkSourceFileId}/export?token=${token}`).then(r => r.text());
-    const songs = remaining.split('\n').map(s => s.trim()).filter(Boolean);
+    const [{ songs }, playlist] = await Promise.all([
+      apiFetch(`/api/files/${bulkSourceFileId}/remaining-songs`),
+      apiFetch(`/api/playlists/${playlistId}`),
+    ]);
 
     if (!songs.length) { resultEl.textContent = 'No remaining songs.'; return; }
 
-    // Fetch current playlist to check duplicates
-    const playlist = await apiFetch(`/api/playlists/${playlistId}`);
     const existing = new Set(playlist.songs.map(s => s.toLowerCase().trim()));
-
     const toAdd = songs.filter(s => !existing.has(s.toLowerCase().trim()));
     const dupes = songs.length - toAdd.length;
 
     if (!toAdd.length) {
-      resultEl.textContent = `All ${songs.length} songs already in playlist.`;
+      resultEl.textContent = `All ${songs.length} songs already in that playlist.`;
       return;
     }
 
-    // Update playlist with merged songs
-    const newSongs = [...playlist.songs, ...toAdd];
     await apiFetch(`/api/playlists/${playlistId}`, {
       method: 'PUT',
-      body: JSON.stringify({ songs: newSongs }),
+      body: JSON.stringify({ songs: [...playlist.songs, ...toAdd] }),
     });
 
     document.getElementById('bulk-modal').classList.remove('open');
