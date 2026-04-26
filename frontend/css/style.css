@@ -548,11 +548,90 @@ input[type=text]:focus, input[type=password]:focus {
 }
 
 
+/* SORT PAGE: sticky top wrapper (desktop: no-op, mobile: sticks) */
+.sort-sticky-top { width: 100%; max-width: 760px; }
+
 /* RESPONSIVE */
-@media (max-width: 600px) {
-  .song-card { padding: 28px 24px; }
-  .song-artist { font-size: 1.5rem; }
-  .btn-add, .btn-skip { padding: 14px; font-size: 1rem; }
-  .sort-actions { gap: 10px; }
-  .pl-card-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 960px) {
+  .pl-card-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 768px) {
+  /* Sort container: top-aligned, full-width, room for sticky bottom bar */
+  .sort-container {
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 0 0 80px;
+  }
+
+  #sort-screen {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Song card area sticks below the nav while user scrolls playlist cards */
+  .sort-sticky-top {
+    position: sticky;
+    top: 60px;
+    z-index: 50;
+    background: var(--bg);
+    max-width: 100%;
+    padding: 10px 14px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sort-topbar {
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .sort-progress {
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .song-card {
+    max-width: 100%;
+    padding: 16px 18px;
+    border-radius: 12px;
+    text-align: left;
+  }
+
+  .song-artist { font-size: 1.4rem; }
+  .song-title { font-size: 1.1rem; }
+
+  /* Playlist card grid: 3 columns, full width, scrollable */
+  .pl-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 100%;
+    padding: 10px 14px 6px;
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .pl-card { padding: 10px 8px 8px; }
+  .pl-card-name { font-size: 0.72rem; }
+
+  /* Skip/Add bar sticks to the bottom */
+  .sort-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    max-width: 100%;
+    margin-top: 6px;
+    gap: 10px;
+  }
+
+  .btn-add, .btn-skip {
+    padding: 16px;
+    font-size: 1rem;
+    border-radius: 12px;
+  }
+
+  /* Hide keyboard hint on mobile */
+  .sort-key-hint { display: none; }
 }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>SongSorta – Sorting</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -17,40 +17,46 @@
 <div class="sort-container">
   <!-- Sort Screen -->
   <div id="sort-screen">
-    <div class="sort-topbar">
-      <div class="sort-topbar-left">
-        <a href="/" style="color:var(--text-muted);font-size:1.2rem">←</a>
-        <span class="file-name-label" id="file-name-label"></span>
+
+    <!-- Sticky top: topbar + progress + song card -->
+    <div class="sort-sticky-top">
+      <div class="sort-topbar">
+        <div class="sort-topbar-left">
+          <a href="/" style="color:var(--text-muted);font-size:1.2rem">←</a>
+          <span class="file-name-label" id="file-name-label"></span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-xs" onclick="doUndo()">↩ Undo</button>
+          <button class="btn btn-ghost btn-xs" onclick="doRestart()">↺ Restart</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-xs" onclick="doUndo()">↩ Undo</button>
-        <button class="btn btn-ghost btn-xs" onclick="doRestart()">↺ Restart</button>
+
+      <div class="sort-progress">
+        <div class="sort-progress-text">
+          <span id="progress-text">Song 1 of —</span>
+          <span id="added-count" style="color:var(--accent)">0 added</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="song-card" id="song-card">
+        <div class="song-artist" id="song-artist">—</div>
+        <div class="song-title" id="song-title"></div>
       </div>
     </div>
 
-    <div class="sort-progress">
-      <div class="sort-progress-text">
-        <span id="progress-text">Song 1 of —</span>
-        <span id="added-count" style="color:var(--accent)">0 added</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
-      </div>
-    </div>
-
-    <div class="song-card" id="song-card">
-      <div class="song-artist" id="song-artist">—</div>
-      <div class="song-title" id="song-title"></div>
-    </div>
-
+    <!-- Scrollable: playlist cards -->
     <div class="pl-card-grid" id="pl-card-grid"></div>
 
+    <!-- Sticky bottom: skip / add -->
     <div class="sort-actions">
       <button class="btn-skip" onclick="doAction('skip', null)">✕ Skip</button>
       <button class="btn-add" onclick="doAction('add', selectedPlaylistId)">✓ Add</button>
     </div>
 
-    <div class="key-hint" style="margin-top:10px">
+    <div class="key-hint sort-key-hint">
       <kbd>←</kbd> Skip &nbsp; <kbd>→</kbd> Add to selected &nbsp; <kbd>1</kbd>–<kbd>9</kbd> Top 9 cards &nbsp; <kbd>⌘Z</kbd> Undo
     </div>
   </div>
