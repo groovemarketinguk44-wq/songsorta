@@ -431,32 +431,22 @@ async function doBulkAdd() {
   const resultEl = document.getElementById('bulk-result');
   resultEl.textContent = 'Adding…';
   try {
-    const [{ songs }, playlist] = await Promise.all([
-      apiFetch(`/api/files/${bulkSourceFileId}/remaining-songs`),
-      apiFetch(`/api/playlists/${playlistId}`),
-    ]);
+    const result = await apiFetch(`/api/files/${bulkSourceFileId}/bulk-to-playlist`, {
+      method: 'POST',
+      body: JSON.stringify({ playlist_id: parseInt(playlistId) }),
+    });
 
-    if (!songs.length) { resultEl.textContent = 'No remaining songs.'; return; }
-
-    const existing = new Set(playlist.songs.map(s => s.toLowerCase().trim()));
-    const toAdd = songs.filter(s => !existing.has(s.toLowerCase().trim()));
-    const dupes = songs.length - toAdd.length;
-
-    if (!toAdd.length) {
-      resultEl.textContent = `All ${songs.length} songs already in that playlist.`;
+    if (!result.total) { resultEl.textContent = 'No remaining songs.'; return; }
+    if (!result.added) {
+      resultEl.textContent = `All ${result.total} songs already in that playlist.`;
       return;
     }
 
-    await apiFetch(`/api/playlists/${playlistId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ songs: [...playlist.songs, ...toAdd] }),
-    });
-
     document.getElementById('bulk-modal').classList.remove('open');
     showToast(
-      dupes > 0
-        ? `Added ${toAdd.length} songs (${dupes} duplicates skipped)`
-        : `Added ${toAdd.length} songs to playlist`,
+      result.duplicates > 0
+        ? `Added ${result.added} songs (${result.duplicates} duplicates skipped)`
+        : `Added ${result.added} songs to playlist`,
       'success', 3500
     );
     loadDashboard();

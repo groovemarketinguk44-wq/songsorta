@@ -122,6 +122,37 @@ def restart_file(file_id: int, db: Session = Depends(get_db), user: User = Depen
     return file_progress(f)
 
 
+@router.post("/{file_id}/bulk-to-playlist")
+def bulk_to_playlist(file_id: int, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from ..models import Playlist
+    f = db.query(SourceFile).filter_by(id=file_id, user_id=user.id).first()
+    if not f:
+        raise HTTPException(404)
+    playlist_id = body.get("playlist_id")
+    if not playlist_id:
+        raise HTTPException(400, "playlist_id required")
+    pl = db.query(Playlist).filter_by(id=playlist_id, user_id=user.id).first()
+    if not pl:
+        raise HTTPException(404, "Playlist not found")
+
+    remaining = json.loads(f.remaining_songs)
+    existing = {s.lower().strip() for s in json.loads(pl.songs)}
+    to_add = [s for s in remaining if s.lower().strip() not in existing]
+    dupes = len(remaining) - len(to_add)
+
+    if to_add:
+        current_songs = json.loads(pl.songs)
+        pl.songs = json.dumps(current_songs + to_add)
+        pl.updated_at = datetime.utcnow()
+
+    f.remaining_songs = json.dumps([])
+    f.current_index = 0
+    f.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"added": len(to_add), "duplicates": dupes, "total": len(remaining)}
+
+
 @router.delete("/{file_id}")
 def delete_file(file_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     f = db.query(SourceFile).filter_by(id=file_id, user_id=user.id).first()
