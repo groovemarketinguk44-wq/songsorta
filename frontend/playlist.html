@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pl-title">Playlist – SongSorta</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">SongSorta</a>
+  <div class="nav-right">
+    <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="playlist-header">
+    <div class="playlist-header-info">
+      <h1 id="pl-name">Loading…</h1>
+      <div class="meta" id="pl-meta"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="renamePlaylist()">✎ Rename</button>
+      <button class="btn btn-secondary btn-sm" onclick="sortPlaylist()">↺ Sort this playlist</button>
+      <button class="btn btn-primary btn-sm" onclick="exportPlaylist()">↓ Export</button>
+    </div>
+  </div>
+
+  <div class="song-list" id="song-list">
+    <div class="empty-state">Loading…</div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/playlist.js"></script>
+<script>
+  if (!requireAuth()) throw new Error('not authed');
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SongSorta – Login</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-box">
+    <div class="login-logo">SongSorta</div>
+    <div class="login-sub">Sort your song lists into playlists</div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" id="tab-login" onclick="switchTab('login')">Log in</button>
+      <button class="login-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <div id="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="your username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Log in</button>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="choose a username" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="doRegister()">Create account</button>
+      <div class="error-msg" id="reg-error"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+  if (getToken()) window.location.href = '/';
+
+  function switchTab(tab) {
+    document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('tab-login').className = 'login-tab' + (tab === 'login' ? ' active' : '');
+    document.getElementById('tab-register').className = 'login-tab' + (tab === 'register' ? ' active' : '');
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    document.getElementById('login-error').textContent = '';
+    try {
+      const data = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      setAuth(data);
+      window.location.href = '/';
+    } catch (e) {
+      document.getElementById('login-error').textContent = e.message;
+    }
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    document.getElementById('reg-error').textContent = '';
+    try {
+      const data = await apiFetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      setAuth(data);
+      window.location.href = '/';
+    } catch (e) {
+      document.getElementById('reg-error').textContent = e.message;
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const active = document.getElementById('login-form').style.display !== 'none' ? 'login' : 'register';
+      active === 'login' ? doLogin() : doRegister();
+    }
+  });
+</script>
+</body>
+</html>

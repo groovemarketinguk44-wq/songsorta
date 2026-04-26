@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SongSorta</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">SongSorta</a>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-username"></span>
+    <button class="nav-logout" onclick="logout()">Log out</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="section-header">
+    <div class="section-title">Song Lists</div>
+    <button class="btn btn-primary btn-sm" onclick="openUploadModal()">+ Upload list</button>
+  </div>
+  <div id="files-list"><div class="empty-state">Loading…</div></div>
+
+  <div class="section-header" style="margin-top:40px">
+    <div class="section-title">Playlists</div>
+    <button class="btn btn-secondary btn-sm" onclick="openCreatePlaylist()">+ New playlist</button>
+  </div>
+  <div id="playlists-list"><div class="empty-state">Loading…</div></div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal">
+    <h2>Upload Song List</h2>
+    <div class="form-group">
+      <label>File (.txt or .docx)</label>
+      <input type="file" id="upload-file" accept=".txt,.docx">
+    </div>
+    <div class="form-group">
+      <label>Name this list</label>
+      <input type="text" id="upload-name" placeholder="e.g. 00s Indie Set">
+    </div>
+    <div class="error-msg" id="upload-error"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('upload-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="doUpload()">Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Playlist Modal -->
+<div class="modal-overlay" id="create-playlist-modal">
+  <div class="modal">
+    <h2>New Playlist</h2>
+    <div class="form-group">
+      <label>Playlist name</label>
+      <input type="text" id="new-playlist-name" placeholder="e.g. Club Bangers">
+    </div>
+    <div class="error-msg" id="create-playlist-error"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('create-playlist-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="doCreatePlaylist()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Speed Dial Modal -->
+<div class="modal-overlay" id="speed-dial-modal">
+  <div class="modal">
+    <h2>Speed Dial — <span id="speed-dial-playlist-name"></span></h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px">Assign a number key (1–9) to quickly add songs to this playlist while sorting.</p>
+    <div class="slot-picker" id="speed-dial-slots"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('speed-dial-modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script>
+  if (!requireAuth()) throw new Error('not authed');
+  const user = getUser();
+  if (user) document.getElementById('nav-username').textContent = user.username;
+
+  function logout() {
+    clearAuth();
+    window.location.href = '/login';
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>
