@@ -1,10 +1,12 @@
 import json
 import os
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
+from docx import Document
+import io
 from ..database import get_db
 from ..models import Playlist, SourceFile, User
 from ..auth import get_current_user
@@ -45,6 +47,36 @@ def list_playlists(db: Session = Depends(get_db), user: User = Depends(get_curre
 @router.post("/")
 def create_playlist(data: PlaylistCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     p = Playlist(name=data.name.strip(), user_id=user.id, songs="[]")
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    return pl_detail(p)
+
+
+@router.post("/upload")
+async def upload_playlist(
+    file: UploadFile = File(...),
+    name: str = Form(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    content = await file.read()
+    if file.filename.endswith(".docx"):
+        doc = Document(io.BytesIO(content))
+        text = "\n".join(p.text for p in doc.paragraphs)
+    else:
+        text = content.decode("utf-8", errors="ignore")
+
+    songs = []
+    for line in text.splitlines():
+        line = line.strip().replace('–', '-').replace('—', '-')
+        if line:
+            songs.append(line)
+
+    if not songs:
+        raise HTTPException(400, "No songs found in file")
+
+    p = Playlist(name=name.strip(), user_id=user.id, songs=json.dumps(songs))
     db.add(p)
     db.commit()
     db.refresh(p)

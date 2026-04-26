@@ -154,11 +154,30 @@ async function assignSlot(slot) {
 }
 
 // Upload modal
+let currentUploadType = 'songlist';
+
+function setUploadType(type) {
+  currentUploadType = type;
+  document.getElementById('type-songlist').className = 'login-tab' + (type === 'songlist' ? ' active' : '');
+  document.getElementById('type-playlist').className = 'login-tab' + (type === 'playlist' ? ' active' : '');
+  document.getElementById('upload-type-hint').textContent = type === 'songlist'
+    ? 'For sorting — songs will be sorted one by one into playlists'
+    : 'Import directly as a playlist — no sorting needed';
+}
+
+function autoFillName(input) {
+  if (!input.files[0]) return;
+  const filename = input.files[0].name.replace(/\.(txt|docx)$/i, '');
+  const nameField = document.getElementById('upload-name');
+  if (!nameField.value) nameField.value = filename;
+}
+
 function openUploadModal() {
   document.getElementById('upload-modal').classList.add('open');
   document.getElementById('upload-error').textContent = '';
   document.getElementById('upload-file').value = '';
   document.getElementById('upload-name').value = '';
+  setUploadType('songlist');
 }
 
 async function doUpload() {
@@ -174,9 +193,15 @@ async function doUpload() {
   fd.append('name', name);
 
   try {
-    const sf = await apiFetch('/api/files/upload', { method: 'POST', body: fd });
-    document.getElementById('upload-modal').classList.remove('open');
-    showToast(`Uploaded ${sf.total_count} songs`, 'success');
+    if (currentUploadType === 'playlist') {
+      const pl = await apiFetch('/api/playlists/upload', { method: 'POST', body: fd });
+      document.getElementById('upload-modal').classList.remove('open');
+      showToast(`Playlist imported: ${pl.song_count} songs`, 'success');
+    } else {
+      const sf = await apiFetch('/api/files/upload', { method: 'POST', body: fd });
+      document.getElementById('upload-modal').classList.remove('open');
+      showToast(`Uploaded ${sf.total_count} songs`, 'success');
+    }
     loadDashboard();
   } catch (e) {
     document.getElementById('upload-error').textContent = e.message;
