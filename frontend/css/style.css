@@ -258,7 +258,7 @@ input[type=text]:focus, input[type=password]:focus {
   letter-spacing: -0.5px;
 }
 .song-title {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   color: var(--text-muted);
   font-weight: 400;
 }

@@ -150,8 +150,8 @@ function applyState(file) {
 function renderSong(song) {
   if (!song) return;
   const { artist, title } = parseSongDisplay(song);
-  document.getElementById('song-artist').textContent = artist;
-  document.getElementById('song-title').textContent = title;
+  document.getElementById('song-artist').textContent = title || artist;
+  document.getElementById('song-title').textContent = title ? artist : '';
 }
 
 function updateProgress(file) {
