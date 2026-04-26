@@ -12,6 +12,20 @@
     <div class="login-logo">SongSorta</div>
     <div class="login-sub">Sort your song lists into playlists</div>
 
+    <!-- OAuth buttons -->
+    <div class="oauth-buttons">
+      <a href="/api/auth/google" class="btn-oauth btn-oauth-google">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Continue with Google
+      </a>
+      <a href="/api/auth/spotify?state=login" class="btn-oauth btn-oauth-spotify">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Continue with Spotify
+      </a>
+    </div>
+
+    <div class="oauth-divider"><span>or</span></div>
+
     <div class="login-tabs">
       <button class="login-tab active" id="tab-login" onclick="switchTab('login')">Log in</button>
       <button class="login-tab" id="tab-register" onclick="switchTab('register')">Register</button>
@@ -49,6 +63,14 @@
 <script>
   if (getToken()) window.location.href = '/';
 
+  // Show errors from OAuth redirects
+  const urlErr = new URLSearchParams(location.search).get('error');
+  if (urlErr) {
+    document.getElementById('login-error').textContent =
+      urlErr === 'google_denied' ? 'Google login was cancelled.' :
+      urlErr === 'spotify_denied' ? 'Spotify login was cancelled.' : 'Login failed.';
+  }
+
   function switchTab(tab) {
     document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
     document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
@@ -61,15 +83,10 @@
     const password = document.getElementById('login-password').value;
     document.getElementById('login-error').textContent = '';
     try {
-      const data = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
-      });
+      const data = await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
       setAuth(data);
       window.location.href = '/';
-    } catch (e) {
-      document.getElementById('login-error').textContent = e.message;
-    }
+    } catch (e) { document.getElementById('login-error').textContent = e.message; }
   }
 
   async function doRegister() {
@@ -77,21 +94,16 @@
     const password = document.getElementById('reg-password').value;
     document.getElementById('reg-error').textContent = '';
     try {
-      const data = await apiFetch('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
-      });
+      const data = await apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) });
       setAuth(data);
       window.location.href = '/';
-    } catch (e) {
-      document.getElementById('reg-error').textContent = e.message;
-    }
+    } catch (e) { document.getElementById('reg-error').textContent = e.message; }
   }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      const active = document.getElementById('login-form').style.display !== 'none' ? 'login' : 'register';
-      active === 'login' ? doLogin() : doRegister();
+      const isLogin = document.getElementById('login-form').style.display !== 'none';
+      isLogin ? doLogin() : doRegister();
     }
   });
 </script>

@@ -37,6 +37,7 @@ function renderFiles(files) {
         </div>
         <div class="file-actions">
           ${actions}
+          <button class="btn btn-ghost btn-xs" onclick="openBulkToPlaylist(${f.id},'${escHtml(f.name)}')">Bulk → Playlist</button>
           <button class="btn btn-ghost btn-xs" onclick="exportRemaining(${f.id}, '${escHtml(f.name)}')">Export</button>
           <button class="btn btn-ghost btn-xs" onclick="deleteFile(${f.id})" style="color:var(--danger)">✕</button>
         </div>
@@ -63,10 +64,12 @@ function renderPlaylists(playlists) {
           <div class="playlist-meta">${p.song_count} song${p.song_count !== 1 ? 's' : ''}</div>
         </div>
         <div class="playlist-actions">
-          <button class="btn btn-ghost btn-xs" onclick="openSpeedDialPicker(${p.id})">⚡ Speed dial</button>
+          <button class="btn btn-ghost btn-xs" onclick="openSpeedDialPicker(${p.id})">⚡</button>
           <button class="btn btn-ghost btn-xs" onclick="sortPlaylist(${p.id})">↺ Sort</button>
           <button class="btn btn-ghost btn-xs" onclick="window.location='/playlist?id=${p.id}'">View</button>
-          <button class="btn btn-ghost btn-xs" onclick="exportPlaylist(${p.id}, '${escHtml(p.name)}')">Export</button>
+          <button class="btn btn-ghost btn-xs" onclick="exportPlaylist(${p.id}, '${escHtml(p.name)}')">↓ txt</button>
+          ${window._spotifyConnected ? `<button class="btn btn-ghost btn-xs" onclick="exportToSpotify(${p.id},'${escHtml(p.name)}')" style="color:#1DB954">→ Spotify</button>` : ''}
+          ${window._appleConfigured ? `<button class="btn btn-ghost btn-xs" onclick="exportToAppleMusicFromDashboard(${p.id},'${escHtml(p.name)}')" style="color:#fc3c44">→ Apple</button>` : ''}
           <button class="btn btn-ghost btn-xs" onclick="deletePlaylist(${p.id})" style="color:var(--danger)">✕</button>
         </div>
       </div>`;
@@ -290,3 +293,183 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
+
+// ── Music service connections ─────────────────────────────────────────────
+
+window._spotifyConnected = false;
+window._appleConfigured = false;
+
+async function checkMusicConnections() {
+  try {
+    const [sp, ap] = await Promise.all([
+      apiFetch('/api/spotify/status').catch(() => null),
+      apiFetch('/api/apple/status').catch(() => null),
+    ]);
+    window._spotifyConnected = sp?.connected || false;
+    window._appleConfigured = ap?.configured || false;
+
+    if (window._spotifyConnected) {
+      document.getElementById('btn-import-spotify').style.display = '';
+    }
+    if (window._appleConfigured) {
+      document.getElementById('btn-import-apple').style.display = '';
+    }
+  } catch (_) {}
+}
+
+// ── Spotify import ────────────────────────────────────────────────────────
+
+let spotifyImportType = 'songlist';
+
+function setSpotifyImportType(type) {
+  spotifyImportType = type;
+  document.getElementById('sp-as-songlist').className = 'login-tab' + (type === 'songlist' ? ' active' : '');
+  document.getElementById('sp-as-playlist').className = 'login-tab' + (type === 'playlist' ? ' active' : '');
+}
+
+async function openSpotifyImport() {
+  document.getElementById('spotify-import-modal').classList.add('open');
+  document.getElementById('spotify-pl-list').innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    const playlists = await apiFetch('/api/spotify/playlists');
+    if (!playlists.length) {
+      document.getElementById('spotify-pl-list').innerHTML = '<div class="empty-state">No playlists found</div>';
+      return;
+    }
+    document.getElementById('spotify-pl-list').innerHTML = playlists.map(p => `
+      <div class="file-item" style="cursor:pointer" onclick="doSpotifyImport('${escHtml(p.id)}','${escHtml(p.name)}')">
+        <div class="file-info">
+          <div class="file-name">${escHtml(p.name)}</div>
+          <div class="file-meta">${p.track_count} tracks</div>
+        </div>
+        <div style="color:var(--text-dim);font-size:1.2rem">›</div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('spotify-pl-list').innerHTML = `<div class="empty-state" style="color:var(--danger)">${e.message}<br><a href="/connect" style="color:var(--accent)">Reconnect Spotify</a></div>`;
+  }
+}
+
+async function doSpotifyImport(spotifyId, name) {
+  document.getElementById('spotify-import-modal').classList.remove('open');
+  showToast(`Importing "${name}"…`, '');
+  try {
+    const result = await apiFetch(`/api/spotify/import/${spotifyId}?import_as=${spotifyImportType}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+    showToast(`Imported ${result.count} songs`, 'success');
+    loadDashboard();
+  } catch (e) {
+    showToast(e.message, 'warn');
+  }
+}
+
+// ── Apple Music import (delegates to connect.js) ──────────────────────────
+
+function openAppleMusicImport() {
+  if (typeof openAppleImport === 'function') {
+    openAppleImport();
+  } else {
+    window.location.href = '/connect';
+  }
+}
+
+// ── Spotify export ────────────────────────────────────────────────────────
+
+async function exportToSpotify(playlistId, name) {
+  showToast(`Exporting "${name}" to Spotify…`, '');
+  try {
+    const result = await apiFetch(`/api/spotify/export/${playlistId}`, { method: 'POST' });
+    const msg = result.not_found.length
+      ? `Added ${result.added} to Spotify (${result.not_found.length} not found)`
+      : `${result.added} tracks added to Spotify`;
+    showToast(msg, 'success', 4000);
+    if (result.spotify_url) window.open(result.spotify_url, '_blank');
+  } catch (e) {
+    showToast(e.message, 'warn');
+  }
+}
+
+// ── Apple Music export ────────────────────────────────────────────────────
+
+async function exportToAppleMusicFromDashboard(playlistId, name) {
+  // Need the songs — fetch playlist detail
+  try {
+    const pl = await apiFetch(`/api/playlists/${playlistId}`);
+    if (typeof exportToAppleMusic === 'function') {
+      showToast(`Exporting "${name}" to Apple Music…`, '');
+      const result = await exportToAppleMusic(pl.songs, pl.name);
+      const msg = result.not_found.length
+        ? `Added ${result.added} to Apple Music (${result.not_found.length} not found)`
+        : `${result.added} tracks added to Apple Music`;
+      showToast(msg, 'success', 4000);
+    } else {
+      window.location.href = '/connect';
+    }
+  } catch (e) {
+    showToast(e.message, 'warn');
+  }
+}
+
+// ── Bulk add song list → playlist ─────────────────────────────────────────
+
+let bulkSourceFileId = null;
+
+function openBulkToPlaylist(fileId, fileName) {
+  bulkSourceFileId = fileId;
+  document.getElementById('bulk-file-name').textContent = fileName;
+
+  // Populate playlist dropdown
+  const sel = document.getElementById('bulk-playlist-select');
+  sel.innerHTML = '<option value="">— Select playlist —</option>' +
+    allPlaylists.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+  document.getElementById('bulk-result').textContent = '';
+  document.getElementById('bulk-modal').classList.add('open');
+}
+
+async function doBulkAdd() {
+  const playlistId = document.getElementById('bulk-playlist-select').value;
+  if (!playlistId) { showToast('Select a playlist first', 'warn'); return; }
+
+  const resultEl = document.getElementById('bulk-result');
+  resultEl.textContent = 'Adding…';
+  try {
+    // Fetch the file's remaining songs
+    const file = await apiFetch(`/api/files/${bulkSourceFileId}`);
+    const fileDetail = await apiFetch(`/api/files/${bulkSourceFileId}`);
+
+    // Get full remaining list via export endpoint (returns plain text)
+    const token = getToken();
+    const remaining = await fetch(`/api/files/${bulkSourceFileId}/export?token=${token}`).then(r => r.text());
+    const songs = remaining.split('\n').map(s => s.trim()).filter(Boolean);
+
+    if (!songs.length) { resultEl.textContent = 'No remaining songs.'; return; }
+
+    // Fetch current playlist to check duplicates
+    const playlist = await apiFetch(`/api/playlists/${playlistId}`);
+    const existing = new Set(playlist.songs.map(s => s.toLowerCase().trim()));
+
+    const toAdd = songs.filter(s => !existing.has(s.toLowerCase().trim()));
+    const dupes = songs.length - toAdd.length;
+
+    if (!toAdd.length) {
+      resultEl.textContent = `All ${songs.length} songs already in playlist.`;
+      return;
+    }
+
+    // Update playlist with merged songs
+    const newSongs = [...playlist.songs, ...toAdd];
+    await apiFetch(`/api/playlists/${playlistId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ songs: newSongs }),
+    });
+
+    document.getElementById('bulk-modal').classList.remove('open');
+    showToast(
+      dupes > 0
+        ? `Added ${toAdd.length} songs (${dupes} duplicates skipped)`
+        : `Added ${toAdd.length} songs to playlist`,
+      'success', 3500
+    );
+    loadDashboard();
+  } catch (e) {
+    resultEl.textContent = e.message;
+  }
+}

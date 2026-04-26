@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SongSorta – Connections</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="logo">SongSorta</a>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-username"></span>
+    <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="container" style="max-width:600px">
+  <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:8px">Music Connections</h1>
+  <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:32px">Connect your music accounts to import and export playlists.</p>
+
+  <div id="status-banner"></div>
+
+  <!-- Spotify -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;background:#1DB954;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        </div>
+        <div>
+          <div style="font-weight:700">Spotify</div>
+          <div id="spotify-status-text" style="font-size:0.82rem;color:var(--text-muted)">Checking…</div>
+        </div>
+      </div>
+      <div id="spotify-actions"></div>
+    </div>
+  </div>
+
+  <!-- Apple Music -->
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#fc3c44,#ff6b6b);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208a5.014 5.014 0 00-.39 1.535 11.81 11.81 0 00-.077 1.31v10.962c.01.217.02.435.04.652.05.64.16 1.27.39 1.876.59 1.566 1.73 2.637 3.332 3.09.48.133.973.2 1.47.24.274.025.55.03.826.035.055 0 .11.006.168.006h10.39c.248 0 .497-.006.746-.017.58-.027 1.16-.1 1.72-.33 1.566-.59 2.637-1.73 3.09-3.33.133-.48.2-.974.24-1.472.025-.274.03-.55.035-.826.003-.056.003-.11.003-.166V7.34c-.006-.4-.022-.8-.078-1.217zm-6.5 3.876l-5.27 3.052a.5.5 0 01-.747-.434V6.19a.5.5 0 01.747-.434l5.27 3.054a.5.5 0 010 .867l-.747-.434.747.434z"/></svg>
+        </div>
+        <div>
+          <div style="font-weight:700">Apple Music</div>
+          <div id="apple-status-text" style="font-size:0.82rem;color:var(--text-muted)">Checking…</div>
+        </div>
+      </div>
+      <div id="apple-actions"></div>
+    </div>
+    <div id="apple-note" style="display:none;margin-top:12px;font-size:0.78rem;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px">
+      Apple Music requires your Apple Music subscription. Authorization happens in your browser and is not stored on our servers.
+    </div>
+  </div>
+
+  <!-- Not configured notice -->
+  <div id="setup-notice" style="display:none" class="card">
+    <div style="font-size:0.85rem;color:var(--text-muted)">
+      <strong style="color:var(--text)">Setup required</strong><br>
+      To enable music service integrations, the app needs API credentials configured.<br>
+      See the <a href="https://github.com/groovemarketinguk44-wq/songsorta#setup" style="color:var(--accent)">setup guide</a>.
+    </div>
+  </div>
+</div>
+
+<!-- Apple Music import modal (triggered from here or dashboard) -->
+<div class="modal-overlay" id="apple-import-modal">
+  <div class="modal" style="max-width:520px">
+    <h2>Import from Apple Music</h2>
+    <div id="apple-pl-list" style="max-height:320px;overflow-y:auto;margin-bottom:16px">
+      <div class="empty-state">Loading playlists…</div>
+    </div>
+    <div style="margin-bottom:16px" id="apple-import-type-wrap">
+      <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:6px">Import as</label>
+      <div class="login-tabs" style="margin-bottom:0">
+        <button class="login-tab active" id="apple-as-playlist" onclick="setAppleImportType('playlist')">Playlist</button>
+        <button class="login-tab" id="apple-as-songlist" onclick="setAppleImportType('songlist')">Song List (for sorting)</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('apple-import-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/connect.js"></script>
+<script>
+  if (!requireAuth()) throw new Error('not authed');
+  const user = getUser();
+  if (user) document.getElementById('nav-username').textContent = user.username;
+  initConnect();
+</script>
+</body>
+</html>

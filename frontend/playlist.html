@@ -23,7 +23,9 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" onclick="renamePlaylist()">✎ Rename</button>
       <button class="btn btn-secondary btn-sm" onclick="sortPlaylist()">↺ Sort this playlist</button>
-      <button class="btn btn-primary btn-sm" onclick="exportPlaylist()">↓ Export</button>
+      <button class="btn btn-primary btn-sm" onclick="exportPlaylist()">↓ txt</button>
+      <button class="btn btn-ghost btn-sm" id="btn-export-spotify" style="display:none;color:#1DB954" onclick="doExportSpotify()">→ Spotify</button>
+      <button class="btn btn-ghost btn-sm" id="btn-export-apple" style="display:none;color:#fc3c44" onclick="doExportApple()">→ Apple Music</button>
     </div>
   </div>
 
@@ -32,10 +34,40 @@
   </div>
 </div>
 
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
 <script src="/static/js/api.js"></script>
+<script src="/static/js/connect.js"></script>
 <script src="/static/js/playlist.js"></script>
 <script>
   if (!requireAuth()) throw new Error('not authed');
+
+  async function doExportSpotify() {
+    showToast('Exporting to Spotify…', '');
+    try {
+      const result = await apiFetch(`/api/spotify/export/${playlistId}`, { method: 'POST' });
+      showToast(result.not_found.length
+        ? `Added ${result.added} tracks (${result.not_found.length} not found)`
+        : `${result.added} tracks added to Spotify`, 'success', 4000);
+      if (result.spotify_url) window.open(result.spotify_url, '_blank');
+    } catch(e) { showToast(e.message, 'warn'); }
+  }
+
+  async function doExportApple() {
+    try {
+      const result = await exportToAppleMusic(songs, document.getElementById('pl-name').textContent);
+      showToast(result.not_found.length
+        ? `Added ${result.added} to Apple Music (${result.not_found.length} not found)`
+        : `${result.added} tracks added to Apple Music`, 'success', 4000);
+    } catch(e) { showToast(e.message, 'warn'); }
+  }
+
+  // Show export buttons if services connected
+  apiFetch('/api/spotify/status').then(d => {
+    if (d.connected) document.getElementById('btn-export-spotify').style.display = '';
+  }).catch(() => {});
+  apiFetch('/api/apple/status').then(d => {
+    if (d.configured) document.getElementById('btn-export-apple').style.display = '';
+  }).catch(() => {});
 </script>
 </body>
 </html>

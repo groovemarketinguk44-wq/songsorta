@@ -11,6 +11,7 @@
   <a href="/" class="logo">SongSorta</a>
   <div class="nav-right">
     <span class="nav-user" id="nav-username"></span>
+    <a href="/connect" class="btn btn-ghost btn-sm">⚡ Connections</a>
     <button class="nav-logout" onclick="logout()">Log out</button>
   </div>
 </nav>
@@ -18,7 +19,11 @@
 <div class="container">
   <div class="section-header">
     <div class="section-title">Song Lists</div>
-    <button class="btn btn-primary btn-sm" onclick="openUploadModal()">+ Upload list</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" id="btn-import-spotify" style="display:none" onclick="openSpotifyImport()">↓ From Spotify</button>
+      <button class="btn btn-ghost btn-sm" id="btn-import-apple" style="display:none" onclick="openAppleMusicImport()">↓ From Apple Music</button>
+      <button class="btn btn-primary btn-sm" onclick="openUploadModal()">+ Upload list</button>
+    </div>
   </div>
   <div id="files-list"><div class="empty-state">Loading…</div></div>
 
@@ -84,19 +89,71 @@
   </div>
 </div>
 
+<!-- Bulk to Playlist Modal -->
+<div class="modal-overlay" id="bulk-modal">
+  <div class="modal">
+    <h2>Bulk Add to Playlist</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px">
+      Add all remaining songs from <strong id="bulk-file-name"></strong> directly into a playlist. Duplicates are automatically skipped.
+    </p>
+    <div class="form-group">
+      <label>Add to playlist</label>
+      <select id="bulk-playlist-select" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:0.9rem">
+        <option value="">— Select playlist —</option>
+      </select>
+    </div>
+    <div id="bulk-result" style="color:var(--text-muted);font-size:0.85rem;min-height:1.2em"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('bulk-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="doBulkAdd()">Add All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spotify Import Modal -->
+<div class="modal-overlay" id="spotify-import-modal">
+  <div class="modal" style="max-width:520px">
+    <h2>Import from Spotify</h2>
+    <div id="spotify-pl-list" style="max-height:320px;overflow-y:auto;margin-bottom:16px">
+      <div class="empty-state">Loading…</div>
+    </div>
+    <div class="form-group">
+      <label style="font-size:0.82rem">Import as</label>
+      <div class="login-tabs" style="margin-bottom:0">
+        <button class="login-tab active" id="sp-as-songlist" onclick="setSpotifyImportType('songlist')">Song List (for sorting)</button>
+        <button class="login-tab" id="sp-as-playlist" onclick="setSpotifyImportType('playlist')">Playlist</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('spotify-import-modal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" async></script>
 <script src="/static/js/api.js"></script>
+<script src="/static/js/connect.js"></script>
 <script src="/static/js/dashboard.js"></script>
 <script>
+  // Pick up OAuth token from redirect (Google/Spotify login)
+  (function() {
+    const p = new URLSearchParams(location.search);
+    const t = p.get('_token'), u = p.get('_user');
+    if (t) {
+      localStorage.setItem('ss_token', t);
+      if (u) localStorage.setItem('ss_user', JSON.stringify({ username: u }));
+      history.replaceState({}, '', '/');
+    }
+  })();
+
   if (!requireAuth()) throw new Error('not authed');
   const user = getUser();
   if (user) document.getElementById('nav-username').textContent = user.username;
 
-  function logout() {
-    clearAuth();
-    window.location.href = '/login';
-  }
+  function logout() { clearAuth(); window.location.href = '/login'; }
 
   loadDashboard();
+  checkMusicConnections();
 </script>
 </body>
 </html>
