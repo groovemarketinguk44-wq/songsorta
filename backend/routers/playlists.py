@@ -31,9 +31,14 @@ router = APIRouter(prefix="/api/playlists", tags=["playlists"])
 
 def pl_detail(p: Playlist) -> dict:
     songs = json.loads(p.songs)
+    downloaded = set(json.loads(p.downloaded_songs or "[]"))
+    new_songs = [s for s in songs if s not in downloaded]
     return {
         "id": p.id, "name": p.name, "songs": songs,
-        "song_count": len(songs), "speed_dial_slot": p.speed_dial_slot,
+        "song_count": len(songs),
+        "downloaded_songs": list(downloaded),
+        "new_songs_count": len(new_songs),
+        "speed_dial_slot": p.speed_dial_slot,
         "created_at": p.created_at, "updated_at": p.updated_at,
     }
 
@@ -190,3 +195,32 @@ def export_playlist(playlist_id: int, token: str = Query(None), db: Session = De
     songs = json.loads(p.songs)
     text = "\n".join(songs)
     return PlainTextResponse(text, headers={"Content-Disposition": f'attachment; filename="{p.name}.txt"'})
+
+
+@router.get("/{playlist_id}/export-new")
+def export_new_songs(playlist_id: int, token: str = Query(None), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if token:
+        user = get_user_by_token(token, db)
+    p = db.query(Playlist).filter_by(id=playlist_id, user_id=user.id).first()
+    if not p:
+        raise HTTPException(404)
+    songs = json.loads(p.songs)
+    downloaded = set(json.loads(p.downloaded_songs or "[]"))
+    new_songs = [s for s in songs if s not in downloaded]
+    downloaded.update(new_songs)
+    p.downloaded_songs = json.dumps(list(downloaded))
+    p.updated_at = datetime.utcnow()
+    db.commit()
+    text = "\n".join(new_songs)
+    return PlainTextResponse(text, headers={"Content-Disposition": f'attachment; filename="{p.name}_new.txt"'})
+
+
+@router.put("/{playlist_id}/downloaded")
+def set_downloaded(playlist_id: int, songs: list[str], db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    p = db.query(Playlist).filter_by(id=playlist_id, user_id=user.id).first()
+    if not p:
+        raise HTTPException(404)
+    p.downloaded_songs = json.dumps(songs)
+    p.updated_at = datetime.utcnow()
+    db.commit()
+    return pl_detail(p)

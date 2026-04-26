@@ -17,7 +17,11 @@
 </nav>
 
 <div class="container">
-  <div class="section-header">
+
+  <!-- Stats bar -->
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="section-header" style="margin-top:32px">
     <div class="section-title">Song Lists</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" id="btn-import-spotify" style="display:none" onclick="openSpotifyImport()">↓ From Spotify</button>
@@ -32,6 +36,12 @@
     <button class="btn btn-secondary btn-sm" onclick="openCreatePlaylist()">+ New playlist</button>
   </div>
   <div id="playlists-list"><div class="empty-state">Loading…</div></div>
+
+  <div class="section-header" style="margin-top:40px">
+    <div class="section-title">Downloads</div>
+  </div>
+  <div id="downloads-list"><div class="empty-state">Loading…</div></div>
+
 </div>
 
 <!-- Upload Modal -->
@@ -94,6 +104,24 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('bulk-modal').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" onclick="doBulkAdd()">Add All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Download Manage Modal -->
+<div class="modal-overlay" id="download-modal">
+  <div class="modal" style="max-width:520px">
+    <h2>Downloads — <span id="dl-modal-name"></span></h2>
+    <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:14px">
+      Toggle which songs you've already downloaded. Only unticked songs will appear in "↓ New".
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-ghost btn-xs" onclick="dlMarkAll()">✓ Mark all</button>
+      <button class="btn btn-ghost btn-xs" onclick="dlClearAll()">✕ Clear all</button>
+    </div>
+    <div id="dl-song-list" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('download-modal').classList.remove('open')">Done</button>
     </div>
   </div>
 </div>

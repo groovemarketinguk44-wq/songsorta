@@ -47,7 +47,8 @@ class Playlist(Base):
     songs = Column(Text, default="[]")
     speed_dial_slot = Column(Integer, nullable=True)
     sort_order = Column(Integer, default=0)
-    spotify_playlist_id = Column(String, nullable=True)  # tracks last export
+    spotify_playlist_id = Column(String, nullable=True)
+    downloaded_songs = Column(Text, default="[]")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 

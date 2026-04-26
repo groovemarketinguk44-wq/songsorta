@@ -23,6 +23,8 @@ MIGRATIONS = [
     "ALTER TABLE users ADD COLUMN spotify_display_name TEXT",
     # Playlist: track last Spotify export
     "ALTER TABLE playlists ADD COLUMN spotify_playlist_id TEXT",
+    # Playlist: download tracking
+    "ALTER TABLE playlists ADD COLUMN downloaded_songs TEXT DEFAULT '[]'",
 ]
 
 

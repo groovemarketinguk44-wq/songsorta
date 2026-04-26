@@ -6,8 +6,24 @@ async function loadDashboard() {
     apiFetch('/api/playlists/'),
   ]);
   allPlaylists = playlists;
+  renderStats(files, playlists);
   renderFiles(files);
   renderPlaylists(playlists);
+  renderDownloads(playlists);
+}
+
+function renderStats(files, playlists) {
+  const totalSorted = playlists.reduce((s, p) => s + p.song_count, 0);
+  const totalRemaining = files.reduce((s, f) => s + f.remaining_count, 0);
+  const totalDownloaded = playlists.reduce((s, p) => s + (p.downloaded_songs ? p.downloaded_songs.length : 0), 0);
+  const newToDownload = playlists.reduce((s, p) => s + (p.new_songs_count || 0), 0);
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${playlists.length}</div><div class="stat-label">Playlists</div></div>
+    <div class="stat-card"><div class="stat-num">${totalSorted.toLocaleString()}</div><div class="stat-label">Songs sorted</div></div>
+    <div class="stat-card"><div class="stat-num">${files.length}</div><div class="stat-label">Song lists</div></div>
+    <div class="stat-card"><div class="stat-num">${totalRemaining.toLocaleString()}</div><div class="stat-label">Left to sort</div></div>
+    <div class="stat-card${newToDownload > 0 ? ' stat-card-accent' : ''}"><div class="stat-num">${newToDownload.toLocaleString()}</div><div class="stat-label">New to download</div></div>
+  `;
 }
 
 function renderFiles(files) {
@@ -353,6 +369,105 @@ async function exportToAppleMusicFromDashboard(playlistId, name) {
   } catch (e) {
     showToast(e.message, 'warn');
   }
+}
+
+// ── Downloads section ─────────────────────────────────────────────────────
+
+function renderDownloads(playlists) {
+  const container = document.getElementById('downloads-list');
+  if (!playlists.length) {
+    container.innerHTML = '<div class="empty-state">No playlists yet.</div>';
+    return;
+  }
+  container.innerHTML = playlists.map(p => {
+    const downloaded = p.downloaded_songs ? p.downloaded_songs.length : 0;
+    const newCount = p.new_songs_count || 0;
+    const statusText = downloaded === 0
+      ? `${p.song_count} songs · none downloaded`
+      : newCount === 0
+        ? `${p.song_count} songs · all downloaded`
+        : `${p.song_count} songs · ${downloaded} downloaded · <span style="color:var(--accent)">${newCount} new</span>`;
+    const newBtn = newCount > 0
+      ? `<button class="btn btn-primary btn-xs" onclick="exportNewSongs(${p.id},'${escHtml(p.name)}')">↓ New (${newCount})</button>`
+      : `<span class="dl-done-badge">✓ Up to date</span>`;
+    return `
+      <div class="file-item">
+        <div class="file-info">
+          <div class="file-name">${escHtml(p.name)}</div>
+          <div class="file-meta">${statusText}</div>
+        </div>
+        <div class="file-actions">
+          ${newBtn}
+          <button class="btn btn-ghost btn-xs" onclick="exportPlaylist(${p.id},'${escHtml(p.name)}')">↓ All</button>
+          <button class="btn btn-ghost btn-xs" onclick="openDownloadManage(${p.id})">⋯ Manage</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function exportNewSongs(playlistId, name) {
+  const token = getToken();
+  window.open(`/api/playlists/${playlistId}/export-new?token=${token}`, '_blank');
+  setTimeout(() => loadDashboard(), 800);
+}
+
+// ── Download manage modal ──────────────────────────────────────────────────
+
+let dlPlaylistId = null;
+let dlSongs = [];
+let dlDownloaded = new Set();
+
+async function openDownloadManage(playlistId) {
+  dlPlaylistId = playlistId;
+  const p = await apiFetch(`/api/playlists/${playlistId}`);
+  dlSongs = p.songs;
+  dlDownloaded = new Set(p.downloaded_songs || []);
+  document.getElementById('dl-modal-name').textContent = p.name;
+  renderDlSongList();
+  document.getElementById('download-modal').classList.add('open');
+}
+
+function renderDlSongList() {
+  document.getElementById('dl-song-list').innerHTML = dlSongs.map((s, i) => {
+    const done = dlDownloaded.has(s);
+    return `
+      <div class="dl-song-row" onclick="toggleDlSong(${i})">
+        <span class="dl-check${done ? ' checked' : ''}">${done ? '✓' : ''}</span>
+        <span class="dl-song-name${done ? ' dl-done' : ''}">${escHtml(s)}</span>
+      </div>`;
+  }).join('');
+}
+
+async function toggleDlSong(idx) {
+  const song = dlSongs[idx];
+  if (dlDownloaded.has(song)) dlDownloaded.delete(song);
+  else dlDownloaded.add(song);
+  renderDlSongList();
+  await apiFetch(`/api/playlists/${dlPlaylistId}/downloaded`, {
+    method: 'PUT',
+    body: JSON.stringify([...dlDownloaded]),
+  });
+  loadDashboard();
+}
+
+async function dlMarkAll() {
+  dlDownloaded = new Set(dlSongs);
+  renderDlSongList();
+  await apiFetch(`/api/playlists/${dlPlaylistId}/downloaded`, {
+    method: 'PUT',
+    body: JSON.stringify([...dlDownloaded]),
+  });
+  loadDashboard();
+}
+
+async function dlClearAll() {
+  dlDownloaded = new Set();
+  renderDlSongList();
+  await apiFetch(`/api/playlists/${dlPlaylistId}/downloaded`, {
+    method: 'PUT',
+    body: JSON.stringify([]),
+  });
+  loadDashboard();
 }
 
 // ── Bulk add song list → playlist ─────────────────────────────────────────
