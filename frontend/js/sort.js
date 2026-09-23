@@ -229,12 +229,30 @@ async function doUndo() {
   }
 }
 
+async function doRemoveInPlaylists() {
+  try {
+    const resp = await apiFetch(`/api/files/${fileId}/remove-in-playlists`, { method: 'POST' });
+    applyState(resp);
+    if (resp.removed > 0) {
+      showToast(`Removed ${resp.removed} song${resp.removed !== 1 ? 's' : ''} already in playlists`, 'success');
+    } else {
+      showToast('No matches found — list is clean', 'success', 1800);
+    }
+  } catch (e) {
+    showToast(e.message || 'Failed', 'warn');
+  }
+}
+
 async function doRestart() {
-  if (!confirm('Restart from the beginning of remaining songs?')) return;
-  const resp = await apiFetch(`/api/files/${fileId}/restart`, { method: 'POST' });
-  applyState(resp);
-  showSortScreen();
-  renderSong(resp.current_song);
+  try {
+    const resp = await apiFetch(`/api/files/${fileId}/restart`, { method: 'POST' });
+    applyState(resp);
+    showSortScreen();
+    renderSong(resp.current_song);
+    showToast('Restarted', 'success', 1200);
+  } catch (e) {
+    showToast(e.message || 'Restart failed', 'warn');
+  }
 }
 
 // ── keyboard ──────────────────────────────────────────────────────────────────

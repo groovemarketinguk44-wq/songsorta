@@ -33,6 +33,7 @@ class SourceFile(Base):
     current_index = Column(Integer, default=0)
     total_count = Column(Integer, default=0)
     last_action = Column(Text, nullable=True)
+    smart_sort_hints = Column(Text, nullable=True)  # JSON: {song_key: [excluded_playlist_id, ...]}
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 

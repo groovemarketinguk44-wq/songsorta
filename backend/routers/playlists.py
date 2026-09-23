@@ -186,9 +186,8 @@ def delete_playlist(playlist_id: int, db: Session = Depends(get_db), user: User 
 
 
 @router.get("/{playlist_id}/export")
-def export_playlist(playlist_id: int, token: str = Query(None), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    if token:
-        user = get_user_by_token(token, db)
+def export_playlist(playlist_id: int, token: str = Query(...), db: Session = Depends(get_db)):
+    user = get_user_by_token(token, db)
     p = db.query(Playlist).filter_by(id=playlist_id, user_id=user.id).first()
     if not p:
         raise HTTPException(404)
@@ -198,9 +197,8 @@ def export_playlist(playlist_id: int, token: str = Query(None), db: Session = De
 
 
 @router.get("/{playlist_id}/export-new")
-def export_new_songs(playlist_id: int, token: str = Query(None), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    if token:
-        user = get_user_by_token(token, db)
+def export_new_songs(playlist_id: int, token: str = Query(...), db: Session = Depends(get_db)):
+    user = get_user_by_token(token, db)
     p = db.query(Playlist).filter_by(id=playlist_id, user_id=user.id).first()
     if not p:
         raise HTTPException(404)

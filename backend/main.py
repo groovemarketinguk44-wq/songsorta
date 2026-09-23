@@ -25,6 +25,8 @@ MIGRATIONS = [
     "ALTER TABLE playlists ADD COLUMN spotify_playlist_id TEXT",
     # Playlist: download tracking
     "ALTER TABLE playlists ADD COLUMN downloaded_songs TEXT DEFAULT '[]'",
+    # SourceFile: smart sort rejection hints
+    "ALTER TABLE source_files ADD COLUMN smart_sort_hints TEXT",
 ]
 
 

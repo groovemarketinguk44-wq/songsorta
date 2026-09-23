@@ -15,13 +15,12 @@ async function loadDashboard() {
 function renderStats(files, playlists) {
   const totalSorted = playlists.reduce((s, p) => s + p.song_count, 0);
   const totalRemaining = files.reduce((s, f) => s + f.remaining_count, 0);
-  const totalDownloaded = playlists.reduce((s, p) => s + (p.downloaded_songs ? p.downloaded_songs.length : 0), 0);
   const newToDownload = playlists.reduce((s, p) => s + (p.new_songs_count || 0), 0);
   document.getElementById('stats-bar').innerHTML = `
     <div class="stat-card"><div class="stat-num">${playlists.length}</div><div class="stat-label">Playlists</div></div>
     <div class="stat-card"><div class="stat-num">${totalSorted.toLocaleString()}</div><div class="stat-label">Songs sorted</div></div>
     <div class="stat-card"><div class="stat-num">${files.length}</div><div class="stat-label">Song lists</div></div>
-    <div class="stat-card"><div class="stat-num">${totalRemaining.toLocaleString()}</div><div class="stat-label">Left to sort</div></div>
+    <div class="stat-card stat-card-clickable" onclick="openRemainingModal()"><div class="stat-num">${totalRemaining.toLocaleString()}</div><div class="stat-label">Left to sort ›</div></div>
     <div class="stat-card${newToDownload > 0 ? ' stat-card-accent' : ''}"><div class="stat-num">${newToDownload.toLocaleString()}</div><div class="stat-label">New to download</div></div>
   `;
 }
@@ -37,10 +36,10 @@ function renderFiles(files) {
     const statusText = f.is_complete
       ? `Complete — ${f.remaining_count} song${f.remaining_count !== 1 ? 's' : ''} remaining`
       : `${f.songs_added} added · ${f.remaining_count} remaining`;
-    const actions = f.is_complete
-      ? `${f.remaining_count > 0
+    const resumeBtn = f.is_complete
+      ? (f.remaining_count > 0
           ? `<button class="btn btn-primary btn-sm" onclick="goSort(${f.id})">Sort ${f.remaining_count} Remaining</button>`
-          : '<span style="color:var(--text-dim);font-size:0.8rem">All sorted</span>'}`
+          : '<span style="color:var(--text-dim);font-size:0.8rem">All sorted</span>')
       : `<button class="btn btn-primary btn-sm" onclick="goSort(${f.id})">Resume</button>`;
     return `
       <div class="file-item">
@@ -52,14 +51,41 @@ function renderFiles(files) {
           </div>
         </div>
         <div class="file-actions">
-          ${actions}
-          <button class="btn btn-ghost btn-xs" onclick="openBulkToPlaylist(${f.id},'${escHtml(f.name)}')">Bulk</button>
-          <button class="btn btn-ghost btn-xs" onclick="exportRemaining(${f.id}, '${escHtml(f.name)}')">Export</button>
-          <button class="btn btn-ghost btn-xs" onclick="deleteFile(${f.id})" style="color:var(--danger)">✕</button>
+          ${resumeBtn}
+          <div class="file-menu-wrap">
+            <button class="btn btn-ghost btn-xs file-menu-btn" onclick="toggleFileMenu(event,${f.id})">⋯</button>
+            <div class="file-menu" id="file-menu-${f.id}">
+              <button onclick="closeFileMenus();openSmartSort(${f.id},'${escHtml(f.name)}')">✨ Smart Sort</button>
+              <button onclick="closeFileMenus();openSeedSort(${f.id})">🌱 Seed Sort</button>
+              <button onclick="closeFileMenus();openBulkToPlaylist(${f.id},'${escHtml(f.name)}')">→ Bulk add</button>
+              <button onclick="closeFileMenus();exportRemaining(${f.id},'${escHtml(f.name)}')">↓ Export</button>
+              <button onclick="closeFileMenus();deleteFile(${f.id})" style="color:var(--danger)">✕ Delete</button>
+            </div>
+          </div>
         </div>
       </div>`;
   }).join('');
 }
+
+function toggleFileMenu(e, fileId) {
+  e.stopPropagation();
+  const menu = document.getElementById(`file-menu-${fileId}`);
+  const isOpen = menu.classList.contains('open');
+  closeFileMenus();
+  if (!isOpen) {
+    menu.classList.add('open');
+    menu.closest('.file-item').classList.add('menu-open');
+  }
+}
+
+function closeFileMenus() {
+  document.querySelectorAll('.file-menu.open').forEach(m => {
+    m.classList.remove('open');
+    m.closest('.file-item')?.classList.remove('menu-open');
+  });
+}
+
+document.addEventListener('click', closeFileMenus);
 
 function renderPlaylists(playlists) {
   const container = document.getElementById('playlists-list');
@@ -468,6 +494,335 @@ async function dlClearAll() {
     body: JSON.stringify([]),
   });
   loadDashboard();
+}
+
+// ── Remaining songs browser ───────────────────────────────────────────────
+
+let remainingAllSongs = [];
+
+async function openRemainingModal() {
+  document.getElementById('remaining-modal').classList.add('open');
+  document.getElementById('remaining-song-list').innerHTML = '<div class="empty-state" style="padding:24px 0">Loading…</div>';
+  document.getElementById('remaining-filter').value = '';
+  document.getElementById('remaining-playlist-sel').innerHTML = '<option value="">— Select playlist —</option>' +
+    allPlaylists.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+  updateRemainingAddBtn();
+
+  try {
+    const data = await apiFetch('/api/files/all-remaining');
+    remainingAllSongs = data.songs;
+    renderRemainingSongs();
+  } catch (e) {
+    document.getElementById('remaining-song-list').innerHTML = `<div class="empty-state" style="color:var(--danger)">${e.message}</div>`;
+  }
+}
+
+function renderRemainingSongs() {
+  const filter = document.getElementById('remaining-filter').value.toLowerCase();
+  const filtered = filter ? remainingAllSongs.filter(s => s.toLowerCase().includes(filter)) : remainingAllSongs;
+  document.getElementById('remaining-count-label').textContent = `${filtered.length} song${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('remaining-song-list').innerHTML = filtered.map((song, i) => `
+    <label class="ss-song-row">
+      <input type="checkbox" class="remaining-check" data-song="${escHtml(song)}"
+        onchange="updateRemainingAddBtn()" style="accent-color:var(--accent)">
+      <span class="ss-song-name">${escHtml(song)}</span>
+    </label>`).join('');
+  updateRemainingAddBtn();
+}
+
+function remainingSelectAll() {
+  document.querySelectorAll('.remaining-check').forEach(cb => cb.checked = true);
+  updateRemainingAddBtn();
+}
+
+function remainingClearAll() {
+  document.querySelectorAll('.remaining-check').forEach(cb => cb.checked = false);
+  updateRemainingAddBtn();
+}
+
+function updateRemainingAddBtn() {
+  const count = document.querySelectorAll('.remaining-check:checked').length;
+  const btn = document.getElementById('remaining-add-btn');
+  btn.textContent = count > 0 ? `Add ${count} song${count !== 1 ? 's' : ''}` : 'Add';
+  btn.disabled = count === 0 || !document.getElementById('remaining-playlist-sel').value;
+}
+
+async function doRemainingBulkAdd() {
+  const playlistId = parseInt(document.getElementById('remaining-playlist-sel').value);
+  if (!playlistId) return;
+  const songs = [...document.querySelectorAll('.remaining-check:checked')].map(cb => cb.dataset.song);
+  if (!songs.length) return;
+
+  document.getElementById('remaining-add-btn').disabled = true;
+  document.getElementById('remaining-add-btn').textContent = 'Adding…';
+
+  try {
+    const result = await apiFetch('/api/files/manual-bulk-add', {
+      method: 'POST',
+      body: JSON.stringify({ songs, playlist_id: playlistId }),
+    });
+    document.getElementById('remaining-modal').classList.remove('open');
+    const plName = allPlaylists.find(p => p.id === playlistId)?.name || 'playlist';
+    showToast(
+      result.duplicates > 0
+        ? `Added ${result.added} songs to "${plName}" (${result.duplicates} already there)`
+        : `Added ${result.added} songs to "${plName}"`,
+      'success', 4000
+    );
+    loadDashboard();
+  } catch (e) {
+    showToast(e.message, 'warn');
+    updateRemainingAddBtn();
+  }
+}
+
+// ── Seed Sort ─────────────────────────────────────────────────────────────
+
+let seedFileId = null;
+let seedList = [];
+let seedIdx = 0;
+
+async function openSeedSort(fileId) {
+  seedFileId = fileId;
+  seedIdx = 0;
+  seedList = [];
+  document.getElementById('seed-progress').textContent = 'Scanning…';
+  document.getElementById('seed-artist-count').textContent = '';
+  document.getElementById('seed-song-title-el').textContent = '';
+  document.getElementById('seed-song-artist-el').textContent = '—';
+  document.getElementById('seed-pl-grid').innerHTML = '';
+  document.getElementById('seed-sort-modal').classList.add('open');
+
+  try {
+    const [data, playlists] = await Promise.all([
+      apiFetch(`/api/files/${fileId}/seed-sort`),
+      apiFetch('/api/playlists/'),
+    ]);
+    seedList = data.seeds;
+    if (!seedList.length) {
+      document.getElementById('seed-progress').textContent = 'All artists already placed';
+      document.getElementById('seed-artist-count').textContent = '';
+      document.getElementById('seed-song-title-el').textContent = 'Smart Sort knows all your artists — run it now';
+      document.getElementById('seed-song-artist-el').textContent = '';
+      return;
+    }
+    renderSeedPlCards(playlists);
+    renderSeedStep();
+    document.getElementById('seed-total-unlockable').textContent =
+      `Filing all ${data.seeds.length} artists unlocks up to ${data.total_unlockable} songs for Smart Sort`;
+  } catch (e) {
+    showToast(e.message, 'warn');
+    document.getElementById('seed-sort-modal').classList.remove('open');
+  }
+}
+
+function renderSeedPlCards(playlists) {
+  const grid = document.getElementById('seed-pl-grid');
+  grid.innerHTML = '';
+  playlists.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'pl-card';
+    card.dataset.id = p.id;
+    if (idx < 9) {
+      const key = document.createElement('span');
+      key.className = 'pl-card-key';
+      key.textContent = idx + 1;
+      card.appendChild(key);
+    }
+    const name = document.createElement('span');
+    name.className = 'pl-card-name';
+    name.textContent = p.name;
+    card.appendChild(name);
+    card.addEventListener('click', () => seedFile(p.id));
+    grid.appendChild(card);
+  });
+}
+
+function renderSeedStep() {
+  const seed = seedList[seedIdx];
+  document.getElementById('seed-progress').textContent = `Artist ${seedIdx + 1} of ${seedList.length}`;
+  document.getElementById('seed-artist-count').textContent =
+    `unlocks ${seed.unlocks} song${seed.unlocks !== 1 ? 's' : ''}`;
+  const { artist, title } = parseSongDisplay(seed.song);
+  document.getElementById('seed-song-title-el').textContent = title || artist;
+  document.getElementById('seed-song-artist-el').textContent = title ? artist : '';
+  document.querySelectorAll('#seed-pl-grid .pl-card').forEach(c => c.classList.remove('selected'));
+}
+
+async function seedFile(playlistId) {
+  const seed = seedList[seedIdx];
+  document.querySelectorAll('#seed-pl-grid .pl-card').forEach(c =>
+    c.classList.toggle('selected', parseInt(c.dataset.id) === playlistId));
+  try {
+    await apiFetch(`/api/files/${seedFileId}/smart-sort-apply`, {
+      method: 'POST',
+      body: JSON.stringify({ assignments: [{ playlist_id: playlistId, songs: [seed.song] }] }),
+    });
+  } catch (e) {
+    showToast(e.message, 'warn');
+    return;
+  }
+  seedAdvance();
+}
+
+function seedSkip() { seedAdvance(); }
+
+function seedAdvance() {
+  seedIdx++;
+  if (seedIdx < seedList.length) {
+    renderSeedStep();
+    const remaining = seedList.slice(seedIdx);
+    const stillUnlockable = remaining.reduce((s, seed) => s + seed.unlocks, 0);
+    document.getElementById('seed-total-unlockable').textContent =
+      `${remaining.length} artists left · ${stillUnlockable} songs still to unlock`;
+  } else {
+    document.getElementById('seed-sort-modal').classList.remove('open');
+    showToast('Seeds done — run Smart Sort now to bulk-match the rest!', 'success', 4000);
+    loadDashboard();
+  }
+}
+
+// Keyboard support inside seed sort modal
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('seed-sort-modal').classList.contains('open')) return;
+  if (e.key >= '1' && e.key <= '9') {
+    const idx = parseInt(e.key) - 1;
+    const cards = [...document.querySelectorAll('#seed-pl-grid .pl-card')];
+    if (idx < cards.length) { e.preventDefault(); seedFile(parseInt(cards[idx].dataset.id)); }
+  }
+  if (e.key === 'ArrowRight') { e.preventDefault(); seedSkip(); }
+});
+
+// ── Smart Sort ────────────────────────────────────────────────────────────
+
+let ssFileId = null;
+let ssSuggestions = [];
+let ssCurrentIdx = 0;
+
+async function openSmartSort(fileId, fileName) {
+  ssFileId = fileId;
+  ssSuggestions = [];
+  ssCurrentIdx = 0;
+  document.getElementById('ss-file-name').textContent = fileName;
+  document.getElementById('ss-summary').textContent = 'Scanning…';
+  document.getElementById('ss-content').innerHTML = '<div class="empty-state" style="padding:24px 0">Matching artists…</div>';
+  document.getElementById('ss-apply-btn').disabled = true;
+  document.getElementById('ss-skip-btn').style.display = 'none';
+  document.getElementById('smart-sort-modal').classList.add('open');
+
+  try {
+    const data = await apiFetch(`/api/files/${fileId}/smart-sort`);
+    ssSuggestions = data.suggestions;
+    if (!ssSuggestions.length) {
+      document.getElementById('ss-summary').textContent = 'No artist matches found — try sorting manually.';
+      document.getElementById('ss-content').innerHTML = '';
+      return;
+    }
+    renderSmartSortStep();
+  } catch (e) {
+    document.getElementById('ss-summary').textContent = '';
+    document.getElementById('ss-content').innerHTML = `<div class="empty-state" style="color:var(--danger)">${e.message}</div>`;
+  }
+}
+
+function renderSmartSortStep() {
+  const group = ssSuggestions[ssCurrentIdx];
+  const total = ssSuggestions.length;
+  document.getElementById('ss-summary').innerHTML =
+    `Playlist <strong style="color:var(--text)">${ssCurrentIdx + 1}</strong> of <strong style="color:var(--text)">${total}</strong>`;
+  document.getElementById('ss-content').innerHTML = `
+    <div class="ss-group">
+      <div class="ss-group-header">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
+          <input type="checkbox" id="ss-group-check" checked
+            onchange="toggleSmartSortAll(this.checked)" style="accent-color:var(--accent)">
+          <span style="font-size:1rem;color:var(--text)">${escHtml(group.playlist_name)}</span>
+        </label>
+        <span class="ss-group-count" id="ss-count">${group.songs.length} song${group.songs.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="ss-song-list">
+        ${group.songs.map((song, si) => `
+          <label class="ss-song-row">
+            <input type="checkbox" class="ss-song-check" data-si="${si}" checked
+              onchange="onSmartSortChange()" style="accent-color:var(--accent)">
+            <span class="ss-song-name">${escHtml(song)}</span>
+          </label>`).join('')}
+      </div>
+    </div>`;
+  onSmartSortChange();
+  document.getElementById('ss-skip-btn').style.display = '';
+  document.getElementById('ss-skip-btn').textContent = ssCurrentIdx < ssSuggestions.length - 1 ? 'Skip →' : 'Skip';
+}
+
+function toggleSmartSortAll(checked) {
+  document.querySelectorAll('.ss-song-check').forEach(cb => cb.checked = checked);
+  onSmartSortChange();
+}
+
+function onSmartSortChange() {
+  const checks = [...document.querySelectorAll('.ss-song-check')];
+  const checkedCount = checks.filter(c => c.checked).length;
+  const total = checks.length;
+  const allChecked = checkedCount === total;
+  const noneChecked = checkedCount === 0;
+  const groupCheck = document.getElementById('ss-group-check');
+  if (groupCheck) {
+    groupCheck.checked = allChecked;
+    groupCheck.indeterminate = !allChecked && !noneChecked;
+  }
+  document.getElementById('ss-count').textContent = `${checkedCount}/${total} song${total !== 1 ? 's' : ''}`;
+  const btn = document.getElementById('ss-apply-btn');
+  const group = ssSuggestions[ssCurrentIdx];
+  const isLast = ssCurrentIdx === ssSuggestions.length - 1;
+  btn.textContent = checkedCount > 0
+    ? (isLast ? `Add ${checkedCount} to "${escHtml(group.playlist_name)}"` : `Add ${checkedCount} & Next →`)
+    : (isLast ? 'Skip' : 'Skip →');
+  btn.disabled = false;
+}
+
+async function doSmartSortApply() {
+  const group = ssSuggestions[ssCurrentIdx];
+  const songs = [], rejected = [];
+  group.songs.forEach((song, si) => {
+    const cb = document.querySelector(`.ss-song-check[data-si="${si}"]`);
+    if (cb && cb.checked) songs.push(song);
+    else rejected.push(song);
+  });
+
+  document.getElementById('ss-apply-btn').disabled = true;
+
+  try {
+    await apiFetch(`/api/files/${ssFileId}/smart-sort-apply`, {
+      method: 'POST',
+      body: JSON.stringify({
+        assignments: songs.length ? [{ playlist_id: group.playlist_id, songs }] : [],
+        rejections: rejected.map(song => ({ song, playlist_id: group.playlist_id })),
+      }),
+    });
+    if (songs.length) showToast(`Added ${songs.length} to "${group.playlist_name}"`, 'success', 2000);
+  } catch (e) {
+    showToast(e.message, 'warn');
+    document.getElementById('ss-apply-btn').disabled = false;
+    return;
+  }
+
+  ssCurrentIdx++;
+  if (ssCurrentIdx < ssSuggestions.length) {
+    renderSmartSortStep();
+  } else {
+    document.getElementById('smart-sort-modal').classList.remove('open');
+    loadDashboard();
+  }
+}
+
+function ssSkip() {
+  ssCurrentIdx++;
+  if (ssCurrentIdx < ssSuggestions.length) {
+    renderSmartSortStep();
+  } else {
+    document.getElementById('smart-sort-modal').classList.remove('open');
+    loadDashboard();
+  }
 }
 
 // ── Bulk add song list → playlist ─────────────────────────────────────────

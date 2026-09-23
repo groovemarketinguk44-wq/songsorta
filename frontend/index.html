@@ -87,6 +87,78 @@
   </div>
 </div>
 
+<!-- Remaining Songs Modal -->
+<div class="modal-overlay" id="remaining-modal">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0">Left to Sort</h2>
+      <span id="remaining-count-label" style="color:var(--text-muted);font-size:0.85rem"></span>
+    </div>
+    <div style="margin-bottom:10px">
+      <input type="text" id="remaining-filter" placeholder="Filter songs…"
+        oninput="renderRemainingSongs()"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 13px;border-radius:8px;font-size:0.88rem">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-ghost btn-xs" onclick="remainingSelectAll()">✓ Select all</button>
+      <button class="btn btn-ghost btn-xs" onclick="remainingClearAll()">✕ Clear</button>
+    </div>
+    <div id="remaining-song-list" style="max-height:340px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="form-group" style="margin-bottom:0">
+      <label style="font-size:0.82rem;color:var(--text-muted)">Add to playlist</label>
+      <select id="remaining-playlist-sel" onchange="updateRemainingAddBtn()"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:0.9rem;margin-top:6px">
+        <option value="">— Select playlist —</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('remaining-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" id="remaining-add-btn" onclick="doRemainingBulkAdd()" disabled>Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Seed Sort Modal -->
+<div class="modal-overlay" id="seed-sort-modal">
+  <div class="seed-sort-wrap">
+    <div class="seed-sort-header">
+      <div>
+        <div class="seed-sort-title">🌱 Seed Sort</div>
+        <div class="seed-sort-sub">File one song per artist — then Smart Sort does the rest</div>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="document.getElementById('seed-sort-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="seed-progress-row">
+      <span id="seed-progress" style="font-weight:600;color:var(--text)">Loading…</span>
+      <span id="seed-artist-count" style="color:var(--accent);font-size:0.85rem;font-weight:600"></span>
+    </div>
+    <div id="seed-total-unlockable" style="font-size:0.75rem;color:var(--text-dim);margin-top:-8px"></div>
+    <div class="song-card" id="seed-song-card">
+      <div class="song-artist" id="seed-song-title-el">—</div>
+      <div class="song-title" id="seed-song-artist-el"></div>
+    </div>
+    <div class="pl-card-grid" id="seed-pl-grid"></div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="seedSkip()">→ Skip this artist</button>
+      <div style="font-size:0.72rem;color:var(--text-dim);margin-top:6px">Keys 1–9 · → to skip</div>
+    </div>
+  </div>
+</div>
+
+<!-- Smart Sort Modal -->
+<div class="modal-overlay" id="smart-sort-modal">
+  <div class="modal" style="max-width:580px">
+    <h2>✨ Smart Sort — <span id="ss-file-name"></span></h2>
+    <p id="ss-summary" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;min-height:1.2em"></p>
+    <div id="ss-content" style="max-height:440px;overflow-y:auto;margin-bottom:4px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('smart-sort-modal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-ghost btn-sm" id="ss-skip-btn" style="display:none" onclick="ssSkip()">Skip →</button>
+      <button class="btn btn-primary" id="ss-apply-btn" onclick="doSmartSortApply()" disabled>Add & Next →</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bulk to Playlist Modal -->
 <div class="modal-overlay" id="bulk-modal">
   <div class="modal">
